@@ -1,0 +1,70 @@
+{
+  "base_url": {
+    "description": "NewAPI 地址",
+    "hint": "填写 OpenAI 兼容根地址，例如 https://fps.de5.net 。支持直接填写到 /v1/chat/completions、/v1/responses 或 /v1/images/generations，插件会自动归一化。",
+    "type": "string",
+    "default": "https://fps.de5.net"
+  },
+  "api_key": {
+    "description": "API Key",
+    "hint": "用于调用 NewAPI/OpenAI 兼容接口的 Bearer key。发布仓库不会包含任何私钥。",
+    "type": "string",
+    "default": ""
+  },
+  "route_mode": {
+    "description": "调用路由",
+    "hint": "auto 会优先尝试 /v1/responses，再回退到 /v1/chat/completions 和 /v1/images/*。",
+    "type": "string",
+    "options": [
+      "auto",
+      "responses",
+      "chat_completions",
+      "images"
+    ],
+    "default": "auto"
+  },
+  "default_model": {
+    "description": "默认模型",
+    "hint": "通常保持 gpt-image-2 即可。插件会按比例自动切换到已验收的别名模型名。",
+    "type": "string",
+    "default": "gpt-image-2"
+  },
+  "quality": {
+    "description": "默认质量",
+    "hint": "auto 不额外传参，high 会附带高质量参数。",
+    "type": "string",
+    "options": [
+      "auto",
+      "high"
+    ],
+    "default": "auto"
+  },
+  "background": {
+    "description": "默认背景",
+    "hint": "auto 不额外传参；transparent 可用于透明背景场景。",
+    "type": "string",
+    "options": [
+      "auto",
+      "transparent",
+      "white"
+    ],
+    "default": "auto"
+  },
+  "timeout_seconds": {
+    "description": "请求超时",
+    "hint": "图片生成接口的总超时秒数。",
+    "type": "int",
+    "slider": {
+      "min": 30,
+      "max": 300,
+      "step": 10
+    },
+    "default": 180
+  },
+  "save_images": {
+    "description": "保留本地图片",
+    "hint": "开启后会把生成结果保存在插件数据目录；关闭则发送后自动清理。",
+    "type": "bool",
+    "default": false
+  }
+}
