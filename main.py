@@ -31,6 +31,7 @@ class GPTImage2Plugin(Star):
     DEFAULT_MODEL = "gpt-image-2"
     DEFAULT_ROUTE_MODE = "auto"
     DEFAULT_TIMEOUT = 180
+    DEFAULT_DENY_MESSAGE = "❌ 当前未在白名单内"
     MAX_PROMPT_LENGTH = 4000
 
     PRESETS: Dict[str, Dict[str, str]] = {
@@ -130,6 +131,12 @@ class GPTImage2Plugin(Star):
 
     @filter.command("gptimage2", prefix_optional=True)
     async def on_gptimage2(self, event: AstrMessageEvent):
+        sender_id = self._sender_id(event)
+        if not self._is_whitelisted_user(sender_id):
+            logger.info(f"[gptimage2] deny non-whitelist sender: {sender_id or 'unknown'}")
+            yield event.plain_result(self._deny_message())
+            return
+
         api_key = str(self.conf.get("api_key", "")).strip()
         if not api_key:
             yield event.plain_result("❌ 请先在插件配置里填写 API Key")
@@ -225,6 +232,48 @@ class GPTImage2Plugin(Star):
         if mode in self.ROUTE_MODES:
             return mode
         return self.DEFAULT_ROUTE_MODE
+
+    def _deny_message(self) -> str:
+        return str(self.conf.get("deny_message", self.DEFAULT_DENY_MESSAGE)).strip() or self.DEFAULT_DENY_MESSAGE
+
+    def _sender_id(self, event: AstrMessageEvent) -> str:
+        try:
+            sender_id = event.get_sender_id()
+        except Exception:
+            sender_id = None
+        if sender_id is None:
+            return ""
+        return str(sender_id).strip()
+
+    def _user_whitelist(self) -> List[str]:
+        raw_value = self.conf.get("user_whitelist", "")
+        if isinstance(raw_value, (list, tuple, set)):
+            values = [str(item).strip() for item in raw_value if str(item).strip()]
+            return list(dict.fromkeys(values))
+
+        text = str(raw_value or "").strip()
+        if not text:
+            return []
+
+        if text.startswith("[") and text.endswith("]"):
+            try:
+                parsed = json.loads(text)
+            except Exception:
+                parsed = None
+            if isinstance(parsed, list):
+                values = [str(item).strip() for item in parsed if str(item).strip()]
+                return list(dict.fromkeys(values))
+
+        values = [item.strip() for item in re.split(r"[\s,，;；|]+", text) if item.strip()]
+        return list(dict.fromkeys(values))
+
+    def _is_whitelisted_user(self, sender_id: str) -> bool:
+        whitelist = self._user_whitelist()
+        if not whitelist:
+            return True
+        if not sender_id:
+            return False
+        return sender_id in whitelist
 
     def _resolve_route_candidates(self) -> List[str]:
         mode = self._route_mode()

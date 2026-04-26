@@ -11,6 +11,18 @@
     "type": "string",
     "default": ""
   },
+  "user_whitelist": {
+    "description": "用户白名单",
+    "hint": "留空则不限制。支持 QQ / 用户 ID，多个值可用逗号、空格或换行分隔。",
+    "type": "string",
+    "default": ""
+  },
+  "deny_message": {
+    "description": "拒绝提示",
+    "hint": "非白名单用户调用时返回的提示文案。",
+    "type": "string",
+    "default": "❌ 当前未在白名单内"
+  },
   "route_mode": {
     "description": "调用路由",
     "hint": "auto 会优先尝试 /v1/responses，再回退到 /v1/chat/completions 和 /v1/images/*。",

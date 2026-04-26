@@ -27,6 +27,11 @@ AstrBot 插件，提供 `/gptimage2` 指令，支持：
 - `api_key`
 - `route_mode`
 
+可选配置：
+
+- `user_whitelist`：限制允许调用的 QQ / 用户 ID，多个值可用逗号、空格或换行分隔；留空则不限制
+- `deny_message`：非白名单用户触发时返回的自定义提示文案
+
 建议 NewAPI 侧提前开放这些模型别名：
 
 - `gpt-image-2-1248x1248(1:1)`
