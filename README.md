@@ -1,4 +1,5 @@
 # gptimage2生图
+<img width="1239" height="1505" alt="PixPin_2026-04-26_22-36-58" src="https://github.com/user-attachments/assets/5b989f87-7ee9-4ad6-93b0-147ad3f3735f" />
 
 AstrBot 插件，提供 `/gptimage2` 指令，支持：
 
