@@ -30,11 +30,50 @@ class GPTImage2Plugin(Star):
     DEFAULT_EDIT_PROMPT = "请保持主体和主要元素，生成高质量重绘图像。"
     DEFAULT_MODEL = "gpt-image-2"
     DEFAULT_ROUTE_MODE = "auto"
-    DEFAULT_TIMEOUT = 180
+    DEFAULT_TIMEOUT = 240
     DEFAULT_DENY_MESSAGE = "❌ 当前未在白名单内"
     MAX_PROMPT_LENGTH = 4000
 
     PRESETS: Dict[str, Dict[str, str]] = {
+        "1:1": {
+            "size": "2880x2880",
+            "alias": "gpt-image-2-2880x2880(1:1)",
+        },
+        "3:2": {
+            "size": "3456x2304",
+            "alias": "gpt-image-2-3456x2304(3:2)",
+        },
+        "2:3": {
+            "size": "2304x3456",
+            "alias": "gpt-image-2-2304x3456(2:3)",
+        },
+        "4:3": {
+            "size": "3264x2448",
+            "alias": "gpt-image-2-3264x2448(4:3)",
+        },
+        "3:4": {
+            "size": "2448x3264",
+            "alias": "gpt-image-2-2448x3264(3:4)",
+        },
+        "16:9": {
+            "size": "3840x2160",
+            "alias": "gpt-image-2-3840x2160(16:9)",
+        },
+        "9:16": {
+            "size": "2160x3840",
+            "alias": "gpt-image-2-2160x3840(9:16)",
+        },
+        "21:9": {
+            "size": "3808x1632",
+            "alias": "gpt-image-2-3808x1632(21:9)",
+        },
+        "9:21": {
+            "size": "1632x3808",
+            "alias": "gpt-image-2-1632x3808(9:21)",
+        },
+    }
+
+    FREE_PRESETS: Dict[str, Dict[str, str]] = {
         "1:1": {
             "size": "1248x1248",
             "alias": "gpt-image-2-1248x1248(1:1)",
@@ -173,7 +212,7 @@ class GPTImage2Plugin(Star):
                 if resolution:
                     preset = self._closest_preset_for_resolution(*resolution)
             if preset is None:
-                preset = self.PRESETS[self.DEFAULT_TEXT_RATIO]
+                preset = self._default_preset()
 
         model_name = preset["alias"] or self._default_model()
         route_candidates = self._resolve_route_candidates()
@@ -203,8 +242,32 @@ class GPTImage2Plugin(Star):
     def _default_model(self) -> str:
         return str(self.conf.get("default_model", self.DEFAULT_MODEL)).strip() or self.DEFAULT_MODEL
 
+    def _use_free_only_resolutions(self) -> bool:
+        value = self.conf.get("free_only_resolutions", True)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        return str(value).strip().lower() not in {"0", "false", "no", "off", "disabled"}
+
+    def _presets(self) -> Dict[str, Dict[str, str]]:
+        return self.FREE_PRESETS if self._use_free_only_resolutions() else self.PRESETS
+
+    def _default_preset(self) -> Dict[str, str]:
+        presets = self._presets()
+        raw = str(self.conf.get("default_resolution", self.DEFAULT_TEXT_RATIO)).strip()
+        if raw:
+            normalized_size = re.sub(r"\s+", "", raw.lower())
+            preset = self._preset_from_size(normalized_size)
+            if preset is not None:
+                return preset
+            normalized_ratio = self.RATIO_ALIASES.get(raw, raw)
+            if normalized_ratio in presets:
+                return presets[normalized_ratio]
+        return presets[self.DEFAULT_TEXT_RATIO]
+
     def _normalized_quality(self) -> str:
-        quality = str(self.conf.get("quality", "auto")).strip().lower()
+        quality = str(self.conf.get("quality", "high")).strip().lower()
         if quality == "high":
             return "high"
         return ""
@@ -423,7 +486,7 @@ class GPTImage2Plugin(Star):
         if preset is None:
             ratio_match = self._find_ratio_match(cleaned)
             if ratio_match:
-                preset = self.PRESETS[ratio_match[1]]
+                preset = self._presets()[ratio_match[1]]
                 cleaned = (cleaned[: ratio_match[0].start()] + " " + cleaned[ratio_match[0].end() :]).strip()
 
         cleaned = re.sub(r"^(生成(?:一个|一张)?|画(?:一个|一张)?|来(?:一张|个)?)(\s+|$)", "", cleaned)
@@ -439,7 +502,7 @@ class GPTImage2Plugin(Star):
         return None
 
     def _preset_from_size(self, size: str) -> Optional[Dict[str, str]]:
-        for preset in self.PRESETS.values():
+        for preset in self._presets().values():
             if preset["size"] == size:
                 return preset
         return None
@@ -487,7 +550,8 @@ class GPTImage2Plugin(Star):
         best_key: Optional[str] = None
         best_score: Optional[Tuple[float, float, float]] = None
 
-        for key, preset in self.PRESETS.items():
+        presets = self._presets()
+        for key, preset in presets.items():
             preset_width, preset_height = map(int, preset["size"].split("x", 1))
             score = (
                 abs((preset_width / preset_height) - target_ratio),
@@ -500,7 +564,7 @@ class GPTImage2Plugin(Star):
 
         if best_key is None:
             return None
-        return self.PRESETS[best_key]
+        return presets[best_key]
 
     def _normalize_base_url(self) -> str:
         url = str(self.conf.get("base_url", "https://fps.de5.net")).strip().rstrip("/")
@@ -652,7 +716,6 @@ class GPTImage2Plugin(Star):
             "stream": False,
             "n": 1,
             "size": size,
-            "response_format": "b64_json",
         }
         if quality:
             body["quality"] = quality
@@ -690,7 +753,6 @@ class GPTImage2Plugin(Star):
             "stream": False,
             "n": 1,
             "size": size,
-            "response_format": "b64_json",
         }
         if quality:
             body["quality"] = quality
